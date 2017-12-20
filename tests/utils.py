@@ -156,6 +156,48 @@ simple_attrs_without_metadata = (bare_attrs | int_attrs | str_attrs |
                                  float_attrs | dict_attrs)
 
 
+bare_attrs_parameters = st.builds(dict, default=st.none())
+int_attrs_parameters = st.builds(dict, default=st.integers())
+str_attrs_parameters = st.builds(dict, default=st.text())
+float_attrs_parameters = st.builds(dict, default=st.floats())
+dict_attrs_parameters = st.builds(
+    dict,
+    default=st.dictionaries(keys=st.text(), values=st.integers()),
+)
+
+simple_attrs_parameters_without_metadata = (
+        bare_attrs_parameters | int_attrs_parameters |
+        str_attrs_parameters | float_attrs_parameters |
+        dict_attrs_parameters
+)
+
+
+def build_attrs_from_parameters(list_of_attrs_parameters):
+    return [attr.ib(**parameters) for parameters in list_of_attrs_parameters]
+
+
+@st.composite
+def simple_attrs_parameters_with_metadata(draw):
+    """
+    Create a simple attribute parameters with arbitrary metadata.
+    """
+    parameters = draw(simple_attrs_parameters)
+    keys = st.booleans() | st.binary() | st.integers() | st.text()
+    vals = st.booleans() | st.binary() | st.integers() | st.text()
+    metadata = draw(st.dictionaries(
+        keys=keys, values=vals, min_size=1, max_size=5))
+
+    parameters.update({'metadata': metadata})
+
+    return parameters
+
+
+simple_attrs_parameters = (
+    simple_attrs_parameters_without_metadata |
+    simple_attrs_parameters_with_metadata()
+)
+
+
 @st.composite
 def simple_attrs_with_metadata(draw):
     """

@@ -26,8 +26,10 @@ from attr._make import (
 from attr.exceptions import DefaultAlreadySetError, NotAnAttrsClassError
 
 from .utils import (
-    gen_attr_names, list_of_attrs, simple_attr, simple_attrs,
-    simple_attrs_with_metadata, simple_attrs_without_metadata, simple_classes
+    build_attrs_from_parameters, gen_attr_names, list_of_attrs, simple_attr,
+    simple_attrs, simple_attrs_parameters_with_metadata,
+    simple_attrs_parameters_without_metadata, simple_attrs_without_metadata,
+    simple_classes
 )
 
 
@@ -824,38 +826,44 @@ class TestMetadata(object):
         for a in fields(C)[1:]:
             assert a.metadata is fields(C)[0].metadata
 
-    @given(lists(simple_attrs_without_metadata, min_size=2, max_size=5))
-    def test_empty_countingattr_metadata_independent(self, list_of_attrs):
+    @given(lists(
+        simple_attrs_parameters_without_metadata,
+        min_size=2,
+        max_size=5,
+    ))
+    def test_empty_countingattr_metadata_independent(
+            self,
+            list_of_attrs_parameters,
+    ):
         """
         All empty metadata attributes are independent before ``@attr.s``.
         """
+        list_of_attrs = build_attrs_from_parameters(list_of_attrs_parameters)
+
         for x, y in itertools.combinations(list_of_attrs, 2):
             assert x.metadata is not y.metadata
 
-    @given(lists(simple_attrs_with_metadata(), min_size=2, max_size=5))
-    def test_not_none_metadata(self, list_of_attrs):
+    @given(lists(
+        simple_attrs_parameters_with_metadata(),
+        min_size=2,
+        max_size=5,
+    ))
+    def test_not_none_metadata(self, list_of_attrs_parameters):
         """
         Non-empty metadata attributes exist as fields after ``@attr.s``.
         """
+        list_of_attrs = build_attrs_from_parameters(list_of_attrs_parameters)
+
         C = make_class("C", dict(zip(gen_attr_names(), list_of_attrs)))
 
         assert len(fields(C)) > 0
 
-        for cls_a, raw_a in zip(fields(C), list_of_attrs):
+        all_forms = zip(fields(C), list_of_attrs, list_of_attrs_parameters)
+
+        for cls_a, raw_a, parameters in all_forms:
             assert cls_a.metadata != {}
             assert cls_a.metadata == raw_a.metadata
-
-    def test_metadata(self):
-        """
-        If metadata that is not None is passed, it is used.
-
-        This is necessary for coverage because the previous test is
-        hypothesis-based.
-        """
-        md = {}
-        a = attr.ib(metadata=md)
-
-        assert md is a.metadata
+            assert cls_a.metadata == parameters['metadata']
 
 
 class TestClassBuilder(object):
